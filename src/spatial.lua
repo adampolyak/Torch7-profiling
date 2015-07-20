@@ -142,6 +142,7 @@ local function net_spatial_mlp(net, src, create, index)
       -- absorb non-linear
       local peak_module = net.modules[index + 1]
       if (peak_module.__typename == 'nn.ReLU') or
+	     (peak_module.__typename == 'nn.PReLU') or
          (peak_module.__typename == 'nn.Threshold') then
 
          index = index + 1

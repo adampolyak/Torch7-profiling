@@ -55,10 +55,37 @@ local process_node = {
       img = node:forward(img)
       return img, sequence, layer
    end,
+   ['nn.SpatialConvolutionMap'] = function(node, img, sequence, layer)
+      assert(node.kH == node.kW, 'conv kernel should be square')
+      assert(node.dH == node.dW, 'conv stride should be equal')
+      if ((next(layer) ~= nil) and ((not layer.conv) or layer.conv.k)) then
+         -- add pending layer to sequence
+         table.insert(sequence, layer)
+         layer = {}
+      end
+
+      layer.convmap = node.connTable:size(1)
+      layer.conv = layer.conv or {}
+      layer.conv.k = node.kH
+      layer.conv.s = node.dH
+      layer.conv.p = layer.conv.p or node.padding
+      layer.output = node.nOutputPlane
+
+      img = node:forward(img)
+      return img, sequence, layer
+   end,
    ['nn.ReLU'] = function(node, img, sequence, layer)
       assert(not layer.nlmp, "shouldn't have two non-linears in same layer")
 
       layer.nlmp = 'ReLU'
+
+      img = node:forward(img)
+      return img, sequence, layer
+   end,
+   ['nn.PReLU'] = function(node, img, sequence, layer)
+      assert(not layer.nlmp, "shouldn't have two non-linears in same layer")
+
+      layer.nlmp = 'PReLU'
 
       img = node:forward(img)
       return img, sequence, layer
@@ -88,6 +115,22 @@ local process_node = {
       return img, sequence, layer
    end,
    ['nn.SpatialMaxPooling'] = function(node, img, sequence, layer)
+      assert(node.kH == node.kW, 'pooling area should be square')
+      assert(node.dH == node.dW, 'pooling strides should be equal')
+
+      if node.kH == node.dH then
+         layer.pool = node.kH
+      else
+         layer.pool = {
+            size   = node.kH,
+            stride = node.dH,
+         }
+      end
+
+      img = node:forward(img)
+      return img, sequence, layer
+   end,
+      ['nn.SpatialAveragePooling'] = function(node, img, sequence, layer)
       assert(node.kH == node.kW, 'pooling area should be square')
       assert(node.dH == node.dW, 'pooling strides should be equal')
 

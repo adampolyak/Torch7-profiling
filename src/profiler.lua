@@ -92,12 +92,17 @@ local function calc_conv(layer, input, map, ops)
    local ops_kernel = (2 * k^2) -- kernel + comb
    local ops_bias = output * output_map
 
-   ops.conv = ops.conv + (input * output * output_map * ops_kernel + ops_bias)
+   if not layer.convmap then
+      ops.conv = ops.conv + (input * output * output_map * ops_kernel + ops_bias)
+   else
+      ops.conv = ops.conv + (layer.convmap * output_map * ops_kernel + ops_bias)
+   end
 
    if layer.nlmp then
       if not ( ('ReLU' == layer.nlmp)
             or ('Threshold' == layer.nlmp)
             or ('SoftMax' == layer.nlmp)
+            or ('PReLU' == layer.nlmp)
             or ('LogSoftMax' == layer.nlmp)) then
 
          error('do not know this non-linear mapper module '..layer.nlmp)
@@ -223,6 +228,7 @@ function profiler:ops(net, img)
    local channel = img:size(1)
    local map = { width  = img:size(3), height = img:size(2), }
    local def = parser:network(net, img)
+   print(def)
 
    return self:calc_ops(def, channel, map)
 end
